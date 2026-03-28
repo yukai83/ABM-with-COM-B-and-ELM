@@ -1,0 +1,70 @@
+seed: 42
+
+population:
+  n_agents: 200
+  network:
+    type: "watts_strogatz"
+    k: 6
+    p_rewire: 0.05
+
+timing:
+  n_steps: 60
+  messages_per_step: 3
+
+exposure:
+  alpha: 0.6
+  gamma0: -1.0
+  gamma1: 2.0
+  rho:
+    sp: 0.8
+    sc: 0.4
+    ic: 0.6
+    ea: 0.3
+    load: 0.5
+
+route:
+  w0: -0.5
+  w_nfc: 1.0
+  w_cap: 1.0
+  w_mr: 0.8
+  w_load: 1.2
+  w_involve: 0.5
+
+attitude:
+  kappa_c: 0.20
+  kappa_p: 0.10
+  a_sc: 0.30
+  a_sp: 0.40
+  a_ic: 0.20
+  a_ev: 0.20
+  a_ea: 0.20
+
+strength:
+  eta_c: 0.10
+  eta_p: 0.03
+  b_sp: 0.50
+  lambda_s: 0.05
+
+intention:
+  beta0: 0.0
+  beta_as: 1.2
+  beta_mr: 0.5
+  beta_ma: 0.3
+  beta_norm: 0.4
+  beta_opp: 0.6
+  beta_fric: 0.8
+
+thresholds:
+  theta_intent: 0.60
+  theta_cap: 0.50
+  theta_opp: 0.50
+
+dynamics:
+  load_decay: 0.02
+  load_from_exposure: 0.03
+  norm_mu: 0.15
+  mr_lr: 0.02
+  ma_lr: 0.03
+  cap_lr: 0.01       # FIX 2: was 0.01 but never applied; now drives cap via mr
+  opp_lr: 0.01       # FIX 2: was 0.00 (frozen); now drives opp via norm
+  strength_decay: 0.005  # FIX 1: passive decay enables measurable durability half-life

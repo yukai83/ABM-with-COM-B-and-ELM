@@ -1,0 +1,15 @@
+[project]
+name = "audience-digital-twin"
+version = "0.1.0"
+description = "COM-B + ELM Agent-Based Audience Digital Twin"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "networkx>=3.2",
+  "pyyaml>=6.0",
+  "matplotlib>=3.7",
+]
+
+[tool.ruff]
+line-length = 100
