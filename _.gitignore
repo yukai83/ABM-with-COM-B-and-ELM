@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Simulation outputs (generated — don't commit these)
+outputs.csv
+outputs.png
+scenario_a.csv
+scenario_a.png
+scenario_b.csv
+scenario_b.png
+scenario_c.csv
+scenario_c.png
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
