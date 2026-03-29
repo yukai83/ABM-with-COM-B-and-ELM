@@ -1,0 +1,72 @@
+seed: 42
+
+population:
+  n_agents: 200
+  network:
+    type: watts_strogatz
+    k: 6
+    p_rewire: 0.05
+
+timing:
+  n_steps: 60
+  messages_per_step: 3
+
+exposure:
+  alpha: 0.60
+  gamma0: -1.00
+  gamma1: 2.00
+  rho:
+    sp: 0.80
+    sc: 0.40
+    ic: 1.00
+    ea: 0.30
+    load: 0.50
+
+route:
+  w0: -0.50
+  w_nfc: 1.00
+  w_cap: 1.00
+  w_mr: 0.80
+  w_load: 1.20
+  w_involve: 0.50
+
+attitude:
+  kappa_c: 0.20
+  kappa_p: 0.10
+  a_sc: 0.30
+  a_sp: 0.40
+  a_ic: 0.20
+  a_ev: 0.20
+  a_ea: 0.20   # reserved; not used in Eq.14 peripheral attitude direction
+
+strength:
+  eta_c: 0.10
+  eta_p: 0.03
+  b_sp: 0.50
+  lambda_s: 0.05
+
+intention:
+  beta0: 0.00
+  beta_as: 1.20
+  beta_mr: 0.50
+  beta_ma: 0.30
+  beta_norm: 0.40
+  beta_opp: 0.60
+  beta_fric: 0.80
+
+thresholds:
+  theta_intent: 0.60
+  theta_cap: 0.50
+  theta_opp: 0.50
+
+dynamics:
+  load_decay: 0.020
+  load_from_exposure: 0.05
+  norm_mu: 0.150
+  mr_lr: 0.020       # λR — reflective motivation learning rate
+  ma_lr: 0.030       # λA — automatic motivation learning rate
+  cap_lr: 0.010      # λC
+  opp_lr: 0.010      # λO
+  strength_decay: 0.005   # δS
+  delta_r: 0.005          # δR — pre-message reflective motivation decay [ADDED]
+  delta_a: 0.005          # δA — pre-message automatic motivation decay  [ADDED]
