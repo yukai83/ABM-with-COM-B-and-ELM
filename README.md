@@ -1,7 +1,7 @@
 # Audience Digital Twin — COM-B + ELM ABM
 
-An agent-based digital twin for simulating audience response to persuasive messaging.  
-Integrates the **COM-B** behavioural feasibility framework with the **Elaboration Likelihood Model (ELM)** for route-dependent persuasion and attitude durability.
+An agent-based digital twin for simulating audience response to persuasive messaging.
+It integrates the **COM-B** behavioural feasibility framework with the **Elaboration Likelihood Model (ELM)** for route-dependent persuasion and attitude durability.
 
 > Companion code for: *"A Verifiable Agent-Based Digital Twin Architecture for Audience Response: Integrating COM-B and ELM for Durable Behaviour Simulation"* — ICSOFT 2026 Position Paper.
 
@@ -15,9 +15,9 @@ Three demonstration scenarios are included:
 
 | Scenario | What it shows |
 |---|---|
-| **A** — Route-Dependent Durability | Central-route attitudes persist after campaign ends; peripheral-route attitudes decay rapidly |
-| **B** — Feasibility-Constrained Behaviour | Capability and friction interventions unlock behaviour that messaging alone cannot |
-| **C** — Amplification and Clustering | Engagement-based visibility amplification increases identity-congruent exposure (filter-bubble effect) |
+| **A** — Route-Dependent Durability | Central-route attitudes persist after campaign ends; peripheral-route attitudes decay more quickly |
+| **B** — Feasibility-Constrained Behaviour | Capability and friction interventions affect behaviour under the model's feasibility gate |
+| **C** — Amplification and Clustering | Engagement-based visibility amplification increases identity-congruent exposure |
 
 ---
 
@@ -26,7 +26,11 @@ Three demonstration scenarios are included:
 - Python 3.10 or higher
 - pip
 
-All other dependencies are installed automatically (see step 2 below).
+Install dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
@@ -35,8 +39,8 @@ All other dependencies are installed automatically (see step 2 below).
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/audience-digital-twin.git
-cd audience-digital-twin
+git clone https://github.com/yukai83/ABM-with-COM-B-and-ELM.git
+cd ABM-with-COM-B-and-ELM
 ```
 
 ### 2. Install dependencies
@@ -90,8 +94,8 @@ timing:
 
 dynamics:
   strength_decay: 0.005  # higher = attitudes decay faster (affects Scenario A)
-  cap_lr: 0.01           # higher = capability grows faster (affects Scenario B)
-  opp_lr: 0.01           # higher = opportunity grows faster
+  cap_lr: 0.01           # capability learning rate
+  opp_lr: 0.01           # opportunity learning rate
 
 exposure:
   gamma1: 2.0            # amplification strength (0 = off, affects Scenario C)
@@ -101,17 +105,16 @@ exposure:
 
 ## Repository layout
 
-```
-audience-digital-twin/
+```text
+ABM-with-COM-B-and-ELM/
   README.md
   requirements.txt
-  pyproject.toml
   configs/
-    example.yaml          # all parameters — edit this to change simulation behaviour
+    example.yaml          # configuration file for the simulation
   audience_dt/
     __init__.py
     models.py             # Agent, Message, Params, Scenario dataclasses
-    sim.py                # simulation engine + population initialisers
+    sim.py                # simulation engine and population initialisers
     metrics.py            # output aggregation and durability metrics
     verify.py             # internal verification tests
   run.py                  # CLI entrypoint and scenario runner
@@ -121,19 +124,17 @@ audience-digital-twin/
 
 ## Running in Google Colab
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/)
-
-1. Upload the repository folder to your Google Drive
+1. Upload the repository folder to your Google Drive.
 2. Open a new Colab notebook and run this setup cell:
 
 ```python
 from google.colab import drive
 drive.mount('/content/drive')
 
-!pip install -r /content/drive/MyDrive/audience-digital-twin/requirements.txt -q
+!pip install -r /content/drive/MyDrive/ABM-with-COM-B-and-ELM/requirements.txt -q
 
 import sys
-sys.path.insert(0, '/content/drive/MyDrive/audience-digital-twin')
+sys.path.insert(0, '/content/drive/MyDrive/ABM-with-COM-B-and-ELM')
 ```
 
 3. Then run scenarios directly in Python:
@@ -144,27 +145,27 @@ from audience_dt.models import Params, Scenario
 from audience_dt.sim import init_population, simulate
 from audience_dt.metrics import outputs_to_frame
 
-# Load config and run — see run.py for full parameter loading helper
+# Load config and run — see run.py for the full parameter loading helper.
 ```
 
 Or use shell commands:
 
 ```python
-!python /content/drive/MyDrive/audience-digital-twin/run.py --scenario_a --scenario_b --scenario_c
+!python /content/drive/MyDrive/ABM-with-COM-B-and-ELM/run.py --scenario_a --scenario_b --scenario_c
 ```
 
 ---
 
 ## How it works
 
-The model executes six steps per agent per timestep, following Equations 1–15 in the paper:
+The model executes six steps per agent per timestep:
 
 1. **Exposure** — probability of seeing a message combines peer sharing (network diffusion) with an engagement-to-visibility proxy (platform amplification)
 2. **Route selection** — central vs peripheral processing probability depends on need-for-cognition, capability, reflective motivation, and cognitive load
-3. **Attitude direction update** — central route uses argument quality; peripheral route uses source credibility, social proof, identity congruence, emotional valence and arousal
+3. **Attitude direction update** — central route uses argument quality; peripheral route uses source credibility, social proof, identity congruence, and emotional valence
 4. **Attitude strength update** — central processing produces larger strength gains; high cognitive load reduces consolidation
-5. **Intention formation** — linear combination of attitude×strength, motivations, norms, opportunity, and friction
-6. **Behaviour** — intention threshold must be met AND capability AND opportunity must exceed their thresholds (COM-B feasibility gate)
+5. **Intention formation** — a linear combination of attitude × strength, motivations, norms, opportunity, and friction
+6. **Behaviour** — intention threshold must be met and both capability and opportunity must exceed their thresholds
 
 ---
 
