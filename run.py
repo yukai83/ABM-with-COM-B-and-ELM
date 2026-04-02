@@ -1,14 +1,4 @@
-"""
-run.py — Corrected scenario runner.
-
-Key changes from original GitHub version:
-  - Scenario A: messages use xm_range=(1.0, 1.0) so all messages have Xm=+1 (Table 2)
-  - Scenario B: friction reduction modifies agent-level states[i].fr -= 0.2 (not fr_range)
-    [FIXED: FRi is agent-level per Table 1 and Eq.26; original code changed message fr_range]
-  - Scenario C: identity_congruence now uses Pi and Xm directly;
-                exposure_segregation tracks ICi,m >= 0.75 (manuscript definition)
-  - load_params: reads delta_r / delta_a from YAML dynamics block
-"""
+"""Command-line runner for the audience model and paper scenarios."""
 import argparse
 import copy
 import yaml
@@ -26,8 +16,6 @@ from audience_dt.sim import init_population, init_population_identity_groups, si
 from audience_dt.metrics import outputs_to_frame, outputs_to_frame_with_groups, durability_half_life
 from audience_dt.verify import verify_route_monotonicity, verify_ic_formula, ablation_visibility
 
-
-# ── Parameter loading ─────────────────────────────────────────────────────────
 
 def load_params(cfg: dict) -> tuple:
     exp   = cfg["exposure"]
@@ -57,8 +45,8 @@ def load_params(cfg: dict) -> tuple:
         norm_mu=dyn["norm_mu"], mr_lr=dyn["mr_lr"], ma_lr=dyn["ma_lr"],
         cap_lr=dyn["cap_lr"], opp_lr=dyn["opp_lr"],
         strength_decay=dyn.get("strength_decay", 0.005),
-        delta_r=dyn.get("delta_r", 0.005),   # [ADDED]
-        delta_a=dyn.get("delta_a", 0.005),   # [ADDED]
+        delta_r=dyn.get("delta_r", 0.005),
+        delta_a=dyn.get("delta_a", 0.005),
     )
     s = Scenario(messages_per_step=timing["messages_per_step"])
     return p, s, cfg
@@ -73,7 +61,6 @@ def build_graph(cfg: dict, seed: int) -> nx.Graph:
 
 
 def baseline_row_from_states(states: dict, groups: dict | None = None) -> dict:
-    """Build a true pre-intervention baseline row for scenario plots."""
     agent_ids = list(states.keys())
     att_arr = np.array([states[i].att for i in agent_ids], dtype=float)
     strength_arr = np.array([states[i].strength for i in agent_ids], dtype=float)
@@ -102,27 +89,18 @@ def baseline_row_from_states(states: dict, groups: dict | None = None) -> dict:
 
 
 def prepend_baseline(df: pd.DataFrame, baseline_row: dict) -> pd.DataFrame:
-    """Shift simulated steps to start at t=1 and prepend a shared t=0 baseline."""
     df_shifted = df.copy()
     df_shifted["t"] = df_shifted["t"] + 1
     return pd.concat([pd.DataFrame([baseline_row]), df_shifted], ignore_index=True, sort=False)
 
 
-# ── Scenario A ────────────────────────────────────────────────────────────────
-
 def run_scenario_a(params: Params, seed: int = 42) -> pd.DataFrame:
-    """
-    Two campaigns (central vs peripheral), Xm = +1 in both (Table 2).
-    Campaign: 20 steps. Observation phase: 30 steps (no messages).
-    Both traces now share a true t=0 baseline before route-favouring conditions begin.
-    """
     n = 200
     g = nx.watts_strogatz_graph(n=n, k=6, p=0.05, seed=seed)
 
     traits_base, states_base = init_population(n, np.random.default_rng(seed))
     baseline_row = baseline_row_from_states(states_base)
 
-    # Central-favouring: high AQ, moderate peripheral cues, low initial load
     traits_c = copy.deepcopy(traits_base)
     states_c = copy.deepcopy(states_base)
     for s in states_c.values():
@@ -136,7 +114,6 @@ def run_scenario_a(params: Params, seed: int = 42) -> pd.DataFrame:
                                  campaign_end_step=20),
                         n_steps=50, rng=np.random.default_rng(seed))
 
-    # Peripheral-favouring: moderate AQ, strong cues, higher arousal, high initial load
     traits_p = copy.deepcopy(traits_base)
     states_p = copy.deepcopy(states_base)
     for s in states_p.values():
@@ -155,14 +132,7 @@ def run_scenario_a(params: Params, seed: int = 42) -> pd.DataFrame:
     return pd.concat([df_c, df_p], ignore_index=True)
 
 
-# ── Scenario B ────────────────────────────────────────────────────────────────
-
 def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
-    """
-    Four capability quartiles; three conditions:
-      baseline, cap_boost_Q1, friction_reduce.
-    All three conditions now share a true t=0 baseline before interventions begin.
-    """
     n = 200
     n_steps = 60
     g = nx.watts_strogatz_graph(n=n, k=6, p=0.05, seed=seed)
@@ -182,13 +152,11 @@ def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
     std_scen = Scenario(messages_per_step=3)
     all_dfs = []
 
-    # Condition 1: Baseline
     states_1 = copy.deepcopy(states_base)
     out_1, _ = simulate(g, copy.deepcopy(traits_base), states_1, params, std_scen,
                         n_steps=n_steps, rng=np.random.default_rng(seed + 1), groups=groups)
     all_dfs.append(prepend_baseline(outputs_to_frame_with_groups(out_1), baseline_row).assign(condition="baseline"))
 
-    # Condition 2: Capability boost for Q1
     states_2 = copy.deepcopy(states_base)
     for i, grp in groups.items():
         if grp == "Q1":
@@ -197,7 +165,6 @@ def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
                         n_steps=n_steps, rng=np.random.default_rng(seed + 2), groups=groups)
     all_dfs.append(prepend_baseline(outputs_to_frame_with_groups(out_2), baseline_row).assign(condition="cap_boost_Q1"))
 
-    # Condition 3: Friction reduction — modify agent-level FRi
     states_3 = copy.deepcopy(states_base)
     for i in states_3:
         states_3[i].fr = float(np.clip(states_3[i].fr - 0.20, 0.0, 1.0))
@@ -208,15 +175,7 @@ def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
     return pd.concat(all_dfs, ignore_index=True)
 
 
-# ── Scenario C ────────────────────────────────────────────────────────────────
-
 def run_scenario_c(params: Params, seed: int = 42) -> pd.DataFrame:
-    """
-    Two identity groups (G0: Pi=-1, G1: Pi=+1), messages span Xm in [-1,1].
-    ICi,m = 1 - |Pi - Xm| / 2 (Table 2).
-    Exposure segregation = share of processed exposures with ICi,m >= 0.75.
-    Both amplification conditions now share a true t=0 baseline.
-    """
     n = 200
     n_steps = 60
     g = nx.watts_strogatz_graph(n=n, k=6, p=0.05, seed=seed)
@@ -237,8 +196,6 @@ def run_scenario_c(params: Params, seed: int = 42) -> pd.DataFrame:
 
     return pd.concat(all_dfs, ignore_index=True)
 
-
-# ── Plotting ──────────────────────────────────────────────────────────────────
 
 def plot_scenario_a(df: pd.DataFrame, save_path: str = "scenario_a.png"):
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
@@ -312,8 +269,6 @@ def plot_scenario_c(df: pd.DataFrame, save_path: str = "scenario_c.png"):
     plt.close()
     print(f"  Saved: {save_path}")
 
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     ap = argparse.ArgumentParser()
