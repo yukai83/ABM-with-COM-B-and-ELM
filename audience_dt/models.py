@@ -1,8 +1,16 @@
-from __future__ import annotations
+"""
+models.py — Corrected to match manuscript formal specification.
 
+Key changes from original GitHub version:
+  - AgentTraits: added 'pi' (identity preference Pi; Table 1, used in Eq.14 & Scenario C)
+  - AgentState:  added 'fr' (action friction FRi; Table 1 Behaviour state; Eq.26)
+  - Message:     removed 'fr' (friction is agent-level per Table 1); renamed 'identity_dir' -> 'xm' (Xm; Eq.13-14)
+  - Params:      added 'delta_r', 'delta_a' (δR, δA — pre-message motivation decay; Eq.4-5)
+  - Scenario:    removed 'fr_range'; renamed 'identity_dir_range' -> 'xm_range'
+"""
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-
 import numpy as np
 
 
@@ -16,67 +24,68 @@ def clip(x: float, lo: float, hi: float) -> float:
 
 @dataclass(frozen=True)
 class AgentTraits:
-    nfc: float              # need for cognition
-    trust_inst: float       # institutional trust
-    trust_peer: float       # peer trust
-    identity_salience: float
+    nfc: float                # NFCi
+    trust_inst: float         # Tinst,i
+    trust_peer: float         # Tpeer,i
+    identity_salience: float  # IDi
+    pi: float                 # Pi — identity preference in [-1, 1]  [ADDED]
 
 
 @dataclass
 class AgentState:
-    cap: float      # capability (COM-B C)
-    opp: float      # opportunity (COM-B O)
-    mr: float       # reflective motivation
-    ma: float       # automatic motivation
-    load: float     # cognitive load
-    att: float      # attitude direction [-1, 1]
-    strength: float # attitude strength [0, 1]
-    norm: float     # descriptive norm
+    cap: float
+    opp: float
+    mr: float
+    ma: float
+    load: float
+    att: float
+    strength: float
+    norm: float
     intent: float
     beh: int
-    rep: Dict[int, int]  # per-message repetition count
+    fr: float        # FRi — action friction  [ADDED]
+    rep: Dict[int, int]
 
 
 @dataclass(frozen=True)
 class Message:
     msg_id: int
-    aq: float       # argument quality
-    sc: float       # source credibility
-    sp: float       # social proof
-    ev: float       # emotional valence
-    ea: float       # emotional arousal
-    fr: float       # friction
+    aq: float
+    sc: float
+    sp: float
+    ev: float
+    ea: float        # EAm: used in engagement (Eq.9) and auto-motivation (Eq.23); NOT in attitude direction (Eq.14)
+    xm: float        # Xm — advocated position in [-1,1]  [ADDED; replaces identity_dir]
     involve: float = 0.5
-    identity_dir: float = 0.0
 
 
 @dataclass(frozen=True)
 class Params:
-    alpha: float            # peer vs visibility blend weight
-    gamma0: float           # visibility intercept
-    gamma1: float           # amplification coefficient (Eq. 3)
+    alpha: float
+    gamma0: float
+    gamma1: float
     rho_sp: float
     rho_sc: float
     rho_ic: float
     rho_ea: float
     rho_load: float
-    w0: float               # route-selection intercept
+    w0: float
     w_nfc: float
     w_cap: float
     w_mr: float
     w_load: float
     w_involve: float
-    kappa_c: float          # central route scaling
-    kappa_p: float          # peripheral route scaling
+    kappa_c: float
+    kappa_p: float
     a_sc: float
     a_sp: float
     a_ic: float
     a_ev: float
-    a_ea: float
-    eta_c: float            # central strength gain
-    eta_p: float            # peripheral strength gain
+    a_ea: float      # listed in Table 1; reserved for richer variants; not used in Eq.14
+    eta_c: float
+    eta_p: float
     b_sp: float
-    lambda_s: float         # load penalty on strength
+    lambda_s: float
     beta0: float
     beta_as: float
     beta_mr: float
@@ -90,11 +99,13 @@ class Params:
     load_decay: float
     load_from_exposure: float
     norm_mu: float
-    mr_lr: float
-    ma_lr: float
-    cap_lr: float
-    opp_lr: float
-    strength_decay: float = 0.005  # passive decay; controls durability half-life
+    mr_lr: float        # λR
+    ma_lr: float        # λA
+    cap_lr: float       # λC
+    opp_lr: float       # λO
+    strength_decay: float = 0.005
+    delta_r: float = 0.005   # δR — reflective motivation pre-message decay [ADDED]
+    delta_a: float = 0.005   # δA — automatic motivation pre-message decay  [ADDED]
 
 
 @dataclass
@@ -105,28 +116,27 @@ class Scenario:
     sp_range: tuple = (0.2, 0.9)
     ev_range: tuple = (-0.6, 0.6)
     ea_range: tuple = (0.0, 1.0)
-    fr_range: tuple = (0.0, 1.0)
+    xm_range: tuple = (-1.0, 1.0)    # Xm range [RENAMED from identity_dir_range]
     involve_range: tuple = (0.2, 0.8)
-    identity_dir_range: tuple = (-1.0, 1.0)
-    campaign_end_step: Optional[int] = None  # observation phase starts here
+    # fr_range REMOVED: FRi is agent-level (Table 1), not a per-message attribute
+    campaign_end_step: Optional[int] = None
 
     def sample_messages(self, rng: np.random.Generator, step: int, start_id: int) -> List[Message]:
         if self.campaign_end_step is not None and step >= self.campaign_end_step:
             return []
-
+        lo_xm, hi_xm = self.xm_range
+        if lo_xm >= hi_xm:
+            hi_xm = lo_xm + 1e-12
         msgs: List[Message] = []
         for k in range(self.messages_per_step):
-            msgs.append(
-                Message(
-                    msg_id=start_id + k,
-                    aq=float(rng.uniform(*self.aq_range)),
-                    sc=float(rng.uniform(*self.sc_range)),
-                    sp=float(rng.uniform(*self.sp_range)),
-                    ev=float(rng.uniform(*self.ev_range)),
-                    ea=float(rng.uniform(*self.ea_range)),
-                    fr=float(rng.uniform(*self.fr_range)),
-                    involve=float(rng.uniform(*self.involve_range)),
-                    identity_dir=float(rng.uniform(*self.identity_dir_range)),
-                )
-            )
+            msgs.append(Message(
+                msg_id=start_id + k,
+                aq=float(rng.uniform(*self.aq_range)),
+                sc=float(rng.uniform(*self.sc_range)),
+                sp=float(rng.uniform(*self.sp_range)),
+                ev=float(rng.uniform(*self.ev_range)),
+                ea=float(rng.uniform(*self.ea_range)),
+                xm=float(rng.uniform(lo_xm, hi_xm)),
+                involve=float(rng.uniform(*self.involve_range)),
+            ))
         return msgs
