@@ -25,7 +25,7 @@ def verify_route_monotonicity(params: Params, seed: int = 42) -> str:
                                       identity_salience=traits[i].identity_salience,
                                       pi=traits[i].pi)
                        for i in agent_ids[n//2:]}
-    low_pc  = float(np.mean([p_central(states[i], low_nfc_traits[i],  msg, params) for i in agent_ids[:n//2]]))
+    low_pc = float(np.mean([p_central(states[i], low_nfc_traits[i], msg, params) for i in agent_ids[:n//2]]))
     high_pc = float(np.mean([p_central(states[i], high_nfc_traits[i], msg, params) for i in agent_ids[n//2:]]))
     passed = high_pc > low_pc
     return (f"route_monotonicity: {'PASS' if passed else 'FAIL'} | "

@@ -111,12 +111,10 @@ def compute_intent(state: AgentState, p: Params) -> float:
 def behaviour_from_intent(state: AgentState, intent: float, p: Params, rng=None) -> int:
     """Apply the intent and feasibility thresholds.
 
-    Default ("hard") mode reproduces Eq. (27): a deterministic AND-gate over the
-    intent, capability, and opportunity thresholds. The gate is modular: setting
-    ``p.gate_mode = "soft"`` replaces the step gate with a graded logistic
-    feasibility probability (Reviewer 2), demonstrating that the threshold rule
-    in Eq. (27) is one interchangeable instantiation rather than a structural
-    commitment.
+    The default "hard" mode is the deterministic AND-gate of Eq. (27) over the
+    intent, capability, and opportunity thresholds. Setting ``p.gate_mode =
+    "soft"`` swaps in a graded logistic feasibility probability instead, so the
+    threshold rule is one option rather than something baked into the model.
     """
     if getattr(p, "gate_mode", "hard") == "soft" and rng is not None:
         p_i = sigmoid((intent - p.theta_intent) / p.gate_temp)
@@ -130,8 +128,7 @@ def behaviour_from_intent(state: AgentState, intent: float, p: Params, rng=None)
     )
 
 
-# ── Step output dataclass ─────────────────────────────────────────────────────
-
+# Step output dataclass
 @dataclass
 class StepOutputs:
     mean_att: float
@@ -146,8 +143,7 @@ class StepOutputs:
     exposure_segregation: float = float("nan")
 
 
-# ── Core simulation loop ──────────────────────────────────────────────────────
-
+# Core simulation loop
 def simulate(g, traits, states, params, scenario, n_steps, rng,
              groups=None, track_segregation=False):
     """Run the model for ``n_steps`` and return per-step aggregates."""
@@ -175,11 +171,11 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
             tr = traits[i]
 
             # Slow state updates
-            st.load     = clip(st.load - params.load_decay, 0.0, 1.0)
-            st.norm     = clip((1.0 - params.norm_mu) * st.norm + params.norm_mu * global_beh_rate, 0.0, 1.0)
+            st.load = clip(st.load - params.load_decay, 0.0, 1.0)
+            st.norm = clip((1.0 - params.norm_mu) * st.norm + params.norm_mu * global_beh_rate, 0.0, 1.0)
             st.strength = clip(st.strength - params.strength_decay, 0.0, 1.0)
-            st.cap      = clip(st.cap + params.cap_lr * st.mr, 0.0, 1.0)
-            st.opp      = clip(st.opp + params.opp_lr * st.norm, 0.0, 1.0)
+            st.cap = clip(st.cap + params.cap_lr * st.mr, 0.0, 1.0)
+            st.opp = clip(st.opp + params.opp_lr * st.norm, 0.0, 1.0)
 
             # Motivation decay before message processing
             mr_star = clip(st.mr - params.delta_r, 0.0, 1.0)
@@ -207,7 +203,7 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
 
                 dA = delta_attitude(st, tr, m, pc, params)
                 if params.attitude_noise > 0.0:
-                    dA += float(rng.normal(0.0, params.attitude_noise))  # Reviewer 2: optional process noise
+                    dA += float(rng.normal(0.0, params.attitude_noise))  # optional process noise
                 st.att = clip(st.att + dA, -1.0, 1.0)
 
                 dS = delta_strength(st, tr, m, pc, params)
@@ -229,7 +225,7 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
 
             # Intention and behaviour
             st.intent = compute_intent(st, params)
-            st.beh    = behaviour_from_intent(st, st.intent, params, rng=rng)
+            st.beh = behaviour_from_intent(st, st.intent, params, rng=rng)
 
             if st.intent >= params.theta_intent:
                 intent_high_count += 1
@@ -238,10 +234,10 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
 
         # Aggregate outputs
         agent_ids = list(states.keys())
-        att_arr      = np.array([states[i].att      for i in agent_ids], dtype=float)
-        strength_arr = np.array([states[i].strength  for i in agent_ids], dtype=float)
-        intent_arr   = np.array([states[i].intent    for i in agent_ids], dtype=float)
-        beh_arr      = np.array([states[i].beh       for i in agent_ids], dtype=float)
+        att_arr = np.array([states[i].att for i in agent_ids], dtype=float)
+        strength_arr = np.array([states[i].strength for i in agent_ids], dtype=float)
+        intent_arr = np.array([states[i].intent for i in agent_ids], dtype=float)
+        beh_arr = np.array([states[i].beh for i in agent_ids], dtype=float)
 
         group_beh_rates: Dict[str, float] = {}
         group_mean_atts: Dict[str, float] = {}
@@ -271,8 +267,7 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
     return outputs, states
 
 
-# ── Population initialisers ───────────────────────────────────────────────────
-
+# Population initialisers
 def init_population(n_agents: int, rng: np.random.Generator):
     """Initialise a heterogeneous population."""
     traits = {}

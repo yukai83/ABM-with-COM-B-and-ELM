@@ -20,13 +20,13 @@ from audience_dt.extensions import (run_multiseed, scenario_a_metrics,
 
 
 def load_params(cfg: dict) -> tuple:
-    exp   = cfg["exposure"]
+    exp = cfg["exposure"]
     route = cfg["route"]
-    att   = cfg["attitude"]
-    st    = cfg["strength"]
+    att = cfg["attitude"]
+    st = cfg["strength"]
     intent = cfg["intention"]
-    thr   = cfg["thresholds"]
-    dyn   = cfg["dynamics"]
+    thr = cfg["thresholds"]
+    dyn = cfg["dynamics"]
     timing = cfg["timing"]
 
     p = Params(
@@ -55,7 +55,7 @@ def load_params(cfg: dict) -> tuple:
 
 
 def build_graph(cfg: dict, seed: int) -> nx.Graph:
-    n   = cfg["population"]["n_agents"]
+    n = cfg["population"]["n_agents"]
     net = cfg["population"]["network"]
     if net["type"] == "watts_strogatz":
         return nx.watts_strogatz_graph(n=n, k=net["k"], p=net["p_rewire"], seed=seed)
@@ -135,6 +135,15 @@ def run_scenario_a(params: Params, seed: int = 42) -> pd.DataFrame:
 
 
 def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
+    # Scenario B shows the feasibility gate (Eq. 27) holding behaviour below its
+    # ceiling even when persuasion is present. At the Table 1 defaults of
+    # theta_C = theta_O = 0.50, agents drawn from Uniform(0.3, 0.8) clear both
+    # gates within a few steps and behaviour saturates before any quartile gap
+    # appears. Raising both thresholds to 0.70 keeps the gate binding across the
+    # full 60-step run, which gives the trajectories in Figure 3. Everything else
+    # stays at the Table 1 values.
+    p_b = replace(params, theta_cap=0.70, theta_opp=0.70)
+
     n = 200
     n_steps = 60
     g = nx.watts_strogatz_graph(n=n, k=6, p=0.05, seed=seed)
@@ -155,7 +164,7 @@ def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
     all_dfs = []
 
     states_1 = copy.deepcopy(states_base)
-    out_1, _ = simulate(g, copy.deepcopy(traits_base), states_1, params, std_scen,
+    out_1, _ = simulate(g, copy.deepcopy(traits_base), states_1, p_b, std_scen,
                         n_steps=n_steps, rng=np.random.default_rng(seed + 1), groups=groups)
     all_dfs.append(prepend_baseline(outputs_to_frame_with_groups(out_1), baseline_row).assign(condition="baseline"))
 
@@ -163,14 +172,14 @@ def run_scenario_b(params: Params, seed: int = 42) -> pd.DataFrame:
     for i, grp in groups.items():
         if grp == "Q1":
             states_2[i].cap = min(1.0, states_2[i].cap + 0.20)
-    out_2, _ = simulate(g, copy.deepcopy(traits_base), states_2, params, std_scen,
+    out_2, _ = simulate(g, copy.deepcopy(traits_base), states_2, p_b, std_scen,
                         n_steps=n_steps, rng=np.random.default_rng(seed + 2), groups=groups)
     all_dfs.append(prepend_baseline(outputs_to_frame_with_groups(out_2), baseline_row).assign(condition="cap_boost_Q1"))
 
     states_3 = copy.deepcopy(states_base)
     for i in states_3:
         states_3[i].fr = float(np.clip(states_3[i].fr - 0.20, 0.0, 1.0))
-    out_3, _ = simulate(g, copy.deepcopy(traits_base), states_3, params, std_scen,
+    out_3, _ = simulate(g, copy.deepcopy(traits_base), states_3, p_b, std_scen,
                         n_steps=n_steps, rng=np.random.default_rng(seed + 3), groups=groups)
     all_dfs.append(prepend_baseline(outputs_to_frame_with_groups(out_3), baseline_row).assign(condition="friction_reduce"))
 
@@ -217,9 +226,9 @@ def plot_scenario_a(df: pd.DataFrame, save_path: str = "scenario_a.png"):
 
 
 def plot_scenario_b(df: pd.DataFrame, save_path: str = "scenario_b.png"):
-    quartiles  = ["Q1", "Q2", "Q3", "Q4"]
+    quartiles = ["Q1", "Q2", "Q3", "Q4"]
     conditions = ["baseline", "cap_boost_Q1", "friction_reduce"]
-    colors     = {"baseline": "steelblue", "cap_boost_Q1": "darkorange", "friction_reduce": "green"}
+    colors = {"baseline": "steelblue", "cap_boost_Q1": "darkorange", "friction_reduce": "green"}
     fig, axes  = plt.subplots(2, 2, figsize=(13, 9))
     fig.suptitle("Scenario B: Feasibility-Constrained Behaviour\n"
                  "Behaviour rate per capability quartile, three conditions",
@@ -240,7 +249,7 @@ def plot_scenario_b(df: pd.DataFrame, save_path: str = "scenario_b.png"):
 
 def plot_scenario_c(df: pd.DataFrame, save_path: str = "scenario_c.png"):
     colors_cond = {"no_amplification": "steelblue", "amplification": "crimson"}
-    colors_grp  = {"G0": "#1f77b4", "G1": "#ff7f0e"}
+    colors_grp = {"G0": "#1f77b4", "G1": "#ff7f0e"}
     fig, axes   = plt.subplots(2, 2, figsize=(13, 9))
     fig.suptitle("Scenario C: Amplification and Emergent Clustering\n"
                  "G0 (Pi=−1) vs G1 (Pi=+1)",
@@ -296,8 +305,8 @@ def main():
 
     seed = int(cfg.get("seed", 42))
     params, scenario, cfg = load_params(cfg)
-    g    = build_graph(cfg, seed)
-    rng  = np.random.default_rng(seed)
+    g = build_graph(cfg, seed)
+    rng = np.random.default_rng(seed)
     traits, states = init_population(cfg["population"]["n_agents"], rng)
     outputs, _ = simulate(g=g, traits=traits, states=states, params=params,
                           scenario=scenario, n_steps=cfg["timing"]["n_steps"], rng=rng)
@@ -306,59 +315,70 @@ def main():
 
     fig = plt.figure(figsize=(12, 8))
     fig.suptitle("COM-B + ELM ABM: 200 Agents, 60 Steps", fontsize=13, fontweight="bold")
-    gs  = gridspec.GridSpec(2, 2, hspace=0.4, wspace=0.35)
-    ax1 = fig.add_subplot(gs[0, 0]); ax1.plot(df["t"], df["mean_att"],       color="steelblue");  ax1.set_title("Mean Attitude");  ax1.axhline(0, color="grey", ls="--", lw=0.8)
-    ax2 = fig.add_subplot(gs[0, 1]); ax2.plot(df["t"], df["mean_strength"],  color="darkorange"); ax2.set_title("Mean Strength")
-    ax3 = fig.add_subplot(gs[1, 0]); ax3.plot(df["t"], df["beh_rate"],       color="green");      ax3.set_title("Behaviour Rate")
-    ax4 = fig.add_subplot(gs[1, 1]); ax4.plot(df["t"], df["feasibility_gap"],color="crimson");    ax4.set_title("Feasibility Gap")
-    for ax in [ax1, ax2, ax3, ax4]: ax.set_xlabel("Step")
-    plt.savefig(args.plot, dpi=200, bbox_inches="tight"); plt.close()
+    gs = gridspec.GridSpec(2, 2, hspace=0.4, wspace=0.35)
+
+    panels = [
+        (gs[0, 0], "mean_att", "Mean Attitude", "steelblue", True),
+        (gs[0, 1], "mean_strength", "Mean Strength", "darkorange", False),
+        (gs[1, 0], "beh_rate", "Behaviour Rate", "green", False),
+        (gs[1, 1], "feasibility_gap", "Feasibility Gap", "crimson", False),
+    ]
+    for spec, col, title, color, zero_line in panels:
+        ax = fig.add_subplot(spec)
+        ax.plot(df["t"], df[col], color=color)
+        ax.set_title(title)
+        ax.set_xlabel("Step")
+        if zero_line:
+            ax.axhline(0, color="grey", ls="--", lw=0.8)
+
+    plt.savefig(args.plot, dpi=200, bbox_inches="tight")
+    plt.close()
     print(f"Saved: {args.out_csv}  {args.plot}")
     print(f"Durability half-life: {durability_half_life(df['mean_strength'].to_numpy())}")
     print(f"Final beh_rate={df['beh_rate'].iloc[-1]:.3f}  feasibility_gap={df['feasibility_gap'].iloc[-1]:.3f}  mean_att={df['mean_att'].iloc[-1]:.3f}")
 
     if args.scenario_a:
-        print("\n── Scenario A ──────────────────────────────────────")
+        print("\n=== Scenario A ===")
         df_a = run_scenario_a(params, seed=seed)
         df_a.to_csv("scenario_a.csv", index=False)
         plot_scenario_a(df_a, "scenario_a.png")
         for route in ["central", "peripheral"]:
             sub = df_a[df_a["route"] == route]["mean_strength"].to_numpy()
             post_baseline = sub[1:] if len(sub) > 1 else sub
-            peak   = post_baseline.max()
+            peak = post_baseline.max()
             peak_t = int(np.argmax(post_baseline)) + 1 if len(post_baseline) else 0
-            end    = sub[-1]
-            ret    = end / peak if peak > 0 else float("nan")
-            hl     = durability_half_life(post_baseline)
+            end = sub[-1]
+            ret = end / peak if peak > 0 else float("nan")
+            hl = durability_half_life(post_baseline)
             print(f"  {route}: peak={peak:.3f} at step={peak_t}  end={end:.3f}  retention={ret:.1%}  half_life={hl}")
 
     if args.scenario_b:
-        print("\n── Scenario B ──────────────────────────────────────")
+        print("\n=== Scenario B ===")
         df_b = run_scenario_b(params, seed=seed)
         df_b.to_csv("scenario_b.csv", index=False)
         plot_scenario_b(df_b, "scenario_b.png")
         final_b = df_b[df_b["t"] == df_b["t"].max()]
         for cond in ["baseline", "cap_boost_Q1", "friction_reduce"]:
-            row   = final_b[final_b["condition"] == cond].iloc[0]
+            row = final_b[final_b["condition"] == cond].iloc[0]
             rates = {q: f"{row.get(f'beh_rate_{q}', float('nan')):.2f}"
                      for q in ["Q1", "Q2", "Q3", "Q4"]}
             print(f"  {cond:20s}: {rates}")
 
     if args.scenario_c:
-        print("\n── Scenario C ──────────────────────────────────────")
+        print("\n=== Scenario C ===")
         df_c = run_scenario_c(params, seed=seed)
         df_c.to_csv("scenario_c.csv", index=False)
         plot_scenario_c(df_c, "scenario_c.png")
         for cond in ["no_amplification", "amplification"]:
-            sub      = df_c[df_c["condition"] == cond]
-            var_end  = sub["att_variance"].iloc[-1]
+            sub = df_c[df_c["condition"] == cond]
+            var_end = sub["att_variance"].iloc[-1]
             mean_seg = sub["exposure_segregation"].mean()
-            g0_att   = sub["mean_att_G0"].iloc[-1] if "mean_att_G0" in sub.columns else float("nan")
-            g1_att   = sub["mean_att_G1"].iloc[-1] if "mean_att_G1" in sub.columns else float("nan")
+            g0_att = sub["mean_att_G0"].iloc[-1] if "mean_att_G0" in sub.columns else float("nan")
+            g1_att = sub["mean_att_G1"].iloc[-1] if "mean_att_G1" in sub.columns else float("nan")
             print(f"  {cond:22s}: att_var={var_end:.4f}  mean_seg={mean_seg:.3f}  G0={g0_att:.3f}  G1={g1_att:.3f}")
 
     if args.robustness:
-        print("\n── Multi-seed robustness (Scenario A) ───────────────")
+        print("\n=== Multi-seed robustness (Scenario A) ===")
         seeds = list(range(args.n_seeds))
         summ = run_multiseed(run_scenario_a, scenario_a_metrics, params, seeds)
         summ.to_csv("robustness_scenario_a.csv")
@@ -367,7 +387,7 @@ def main():
         print("  Saved: robustness_scenario_a.csv")
 
     if args.sensitivity:
-        print("\n── Local sensitivity (Scenario A retention gap) ─────")
+        print("\n=== Local sensitivity (Scenario A retention gap) ===")
         param_names = ["w_load", "kappa_c", "kappa_p", "eta_c", "eta_p",
                        "strength_decay", "lambda_s", "theta_intent"]
         sens = local_sensitivity(run_scenario_a, scenario_a_metrics, "retention_gap",
@@ -378,7 +398,7 @@ def main():
         print("  Saved: sensitivity_scenario_a.csv")
 
     if args.ablation_baseline:
-        print("\n── Ablation: full model vs diffusion+sentiment ──────")
+        print("\n=== Ablation: full model vs diffusion+sentiment ===")
         abl = run_ablation_baseline(run_scenario_a, params, seed=seed)
         abl.to_csv("ablation_baseline.csv")
         with pd.option_context("display.width", 140, "display.float_format", "{:.4f}".format):
@@ -386,7 +406,7 @@ def main():
         print("  Saved: ablation_baseline.csv")
 
     if args.verify:
-        print("\n── Verification ─────────────────────────────────────")
+        print("\n=== Verification ===")
         print(verify_route_monotonicity(params, seed=seed))
         print(verify_ic_formula(params, seed=seed))
         print(ablation_visibility(params, seed=seed))

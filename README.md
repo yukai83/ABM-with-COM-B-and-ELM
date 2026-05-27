@@ -15,9 +15,9 @@ Three demonstration scenarios are included:
 
 | Scenario | What it shows |
 |---|---|
-| **A** — Route-Dependent Durability | Central-route attitudes persist after campaign ends; peripheral-route attitudes decay more quickly |
-| **B** — Feasibility-Constrained Behaviour | Capability and friction interventions affect behaviour under the model's feasibility gate |
-| **C** — Amplification and Clustering | Engagement-based visibility amplification increases identity-congruent exposure |
+| **A**: Route-Dependent Durability | Central-route attitudes persist after campaign ends; peripheral-route attitudes decay more quickly |
+| **B**: Feasibility-Constrained Behaviour | Capability and friction interventions affect behaviour under the model's feasibility gate |
+| **C**: Amplification and Clustering | Engagement-based visibility amplification increases identity-congruent exposure |
 
 ---
 
@@ -93,17 +93,16 @@ python run.py --sensitivity
 python run.py --ablation_baseline
 ```
 
-Two optional model extensions are also available via config or `Params`
-(both off by default, so results are unchanged unless enabled):
+Two optional settings are also available via the config file or `Params`, both
+off by default so results are unchanged unless you turn them on:
 
-- `attitude_noise` — standard deviation of optional Gaussian process noise on
-
-- `gate_mode: "soft"` with `gate_temp`
+- `attitude_noise` adds Gaussian noise to the attitude update (its value is the standard deviation; 0 disables it).
+- `gate_mode: "soft"` with `gate_temp` swaps the hard feasibility gate for a graded logistic one.
 
 
 ### 5. Change parameters
 
-All parameters are in `configs/example.yaml`. Edit that file and re-run — no code changes needed. Key parameters to experiment with:
+All parameters are in `configs/example.yaml`. Edit that file and re-run, no code changes needed. Key parameters to experiment with:
 
 ```yaml
 population:
@@ -129,16 +128,22 @@ exposure:
 ABM-with-COM-B-and-ELM/
   README.md
   requirements.txt
+  pyproject.toml          # package metadata for pip install -e .
   configs/
-    example.yaml          # configuration file for the simulation
+    example.yaml          # all parameters; edit this to change simulation behaviour
   audience_dt/
     __init__.py
     models.py             # Agent, Message, Params, Scenario dataclasses
     sim.py                # simulation engine and population initialisers
     metrics.py            # output aggregation and durability metrics
-    verify.py             # internal verification tests
+    verify.py             # internal verification tests (route monotonicity, IC formula, ablation)
+    extensions.py         # diagnostics: multi-seed robustness, sensitivity, ablation
   run.py                  # CLI entrypoint and scenario runner
 ```
+
+### Note on Scenario B feasibility thresholds
+
+`run_scenario_b()` overrides `theta_cap` and `theta_opp` to **0.70** (versus the Table 1 defaults of 0.50). With the default initialisation range of Uniform(0.3, 0.8), agents clear the 0.50 thresholds within the first few steps, so the feasibility gate never visibly constrains behaviour during the 60-step window. Raising both thresholds to 0.70 keeps the gate binding throughout the run, producing the differentiated quartile trajectories shown in Figure 3 of the manuscript. All other parameters remain at their Table 1 values.
 
 ---
 
@@ -165,7 +170,7 @@ from audience_dt.models import Params, Scenario
 from audience_dt.sim import init_population, simulate
 from audience_dt.metrics import outputs_to_frame
 
-# Load config and run — see run.py for the full parameter loading helper.
+# Load config and run, see run.py for the full parameter loading helper.
 ```
 
 Or use shell commands:
@@ -180,12 +185,12 @@ Or use shell commands:
 
 The model executes six steps per agent per timestep:
 
-1. **Exposure** — probability of seeing a message combines peer sharing (network diffusion) with an engagement-to-visibility proxy (platform amplification)
-2. **Route selection** — central vs peripheral processing probability depends on need-for-cognition, capability, reflective motivation, and cognitive load
-3. **Attitude direction update** — central route uses argument quality; peripheral route uses source credibility, social proof, identity congruence, and emotional valence
-4. **Attitude strength update** — central processing produces larger strength gains; high cognitive load reduces consolidation
-5. **Intention formation** — a linear combination of attitude × strength, motivations, norms, opportunity, and friction
-6. **Behaviour** — intention threshold must be met and both capability and opportunity must exceed their thresholds
+1. **Exposure**: probability of seeing a message combines peer sharing (network diffusion) with an engagement-to-visibility proxy (platform amplification)
+2. **Route selection**: central vs peripheral processing probability depends on need-for-cognition, capability, reflective motivation, and cognitive load
+3. **Attitude direction update**: central route uses argument quality; peripheral route uses source credibility, social proof, identity congruence, and emotional valence
+4. **Attitude strength update**: central processing produces larger strength gains; high cognitive load reduces consolidation
+5. **Intention formation**: a linear combination of attitude × strength, motivations, norms, opportunity, and friction
+6. **Behaviour**: intention threshold must be met and both capability and opportunity must exceed their thresholds
 
 ---
 

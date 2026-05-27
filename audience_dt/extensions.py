@@ -1,17 +1,15 @@
-"""Camera-ready extensions for SIMULTECH 2026 reviewer responses.
+"""Diagnostics that sit alongside the core simulator.
 
-This module adds three capabilities requested by reviewers, without altering
-the core model or any default behaviour:
+Three helpers are provided here:
 
   * multi-seed robustness summaries with mean and normal-approximation 95%
-    confidence intervals (Reviewer 1, comment 2);
-  * one-at-a-time local sensitivity sweeps over influential parameters
-    (Reviewer 1, comment 2; verification-first workflow);
+    confidence intervals;
+  * one-at-a-time local sensitivity sweeps over the more influential parameters;
   * a minimal diffusion-plus-sentiment baseline and an ablation comparison
-    against the full COM-B + ELM model (Reviewer 1, comment 4).
+    against the full COM-B + ELM model.
 
-All functions are additive. Existing scenario outputs are unchanged because
-the core simulator and its defaults are untouched.
+None of these touch the simulator or its defaults, so the scenario outputs are
+the same whether or not this module is used.
 """
 from __future__ import annotations
 
@@ -27,14 +25,12 @@ from .models import Params, Scenario
 from .sim import init_population, simulate
 
 
-# ── Summary statistics helper ─────────────────────────────────────────────────
-
+# Summary statistics helper
 def _summarise(values: Sequence[float]) -> Dict[str, float]:
     """Return mean, sd, n, and a normal-approximation 95% CI half-width.
 
-    A normal approximation is used so that the package keeps its existing
-    dependency set (no SciPy required). With a modest number of seeds this is
-    adequate for reporting qualitative robustness.
+    The normal approximation avoids a SciPy dependency and is fine for the
+    small seed counts used here.
     """
     arr = np.asarray([v for v in values if not np.isnan(v)], dtype=float)
     n = int(arr.size)
@@ -51,8 +47,7 @@ def _summarise(values: Sequence[float]) -> Dict[str, float]:
             "ci95_hi": float(mean + half)}
 
 
-# ── Multi-seed robustness ─────────────────────────────────────────────────────
-
+# Multi-seed robustness
 def run_multiseed(scenario_fn: Callable[[Params, int], pd.DataFrame],
                   metric_fn: Callable[[pd.DataFrame], Dict[str, float]],
                   params: Params,
@@ -103,8 +98,7 @@ def scenario_a_metrics(df: pd.DataFrame) -> Dict[str, float]:
     return out
 
 
-# ── Local sensitivity (one-at-a-time) ─────────────────────────────────────────
-
+# Local sensitivity (one-at-a-time)
 def local_sensitivity(scenario_fn: Callable[[Params, int], pd.DataFrame],
                       metric_fn: Callable[[pd.DataFrame], Dict[str, float]],
                       target_metric: str,
@@ -142,8 +136,7 @@ def local_sensitivity(scenario_fn: Callable[[Params, int], pd.DataFrame],
     return out
 
 
-# ── Diffusion-plus-sentiment ablation baseline ────────────────────────────────
-
+# Diffusion-plus-sentiment ablation baseline
 def run_diffusion_sentiment(params: Params, seed: int = 42,
                             n: int = 200, n_steps: int = 50,
                             campaign_end_step: int = 20,

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "audience-dt"
+version = "1.0.0"
+description = "Agent-Based Digital Twin for Audience Response: Integrating COM-B and ELM"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "networkx>=3.0",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+audience-dt = "run:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["audience_dt*"]
+
+[tool.setuptools.package-data]
+"*" = ["configs/*.yaml"]

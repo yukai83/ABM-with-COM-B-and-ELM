@@ -68,12 +68,11 @@ dynamics:
   cap_lr: 0.010      # λC
   opp_lr: 0.010      # λO
   strength_decay: 0.005   # δS
-  delta_r: 0.005          # δR — pre-message reflective motivation decay [ADDED]
-  delta_a: 0.005          # δA — pre-message automatic motivation decay  [ADDED]
+  delta_r: 0.005          # δR — pre-message reflective motivation decay
+  delta_a: 0.005          # δA — pre-message automatic motivation decay
 
-# Optional camera-ready extensions (off by default; enabling them changes results).
-# These are read directly into Params if present; leave commented to reproduce the paper.
+# Optional settings, off by default. Uncomment to enable; doing so changes results.
 # extensions:
-#   attitude_noise: 0.0     # Reviewer 2: sigma of Gaussian process noise on attitude updates
-#   gate_mode: "hard"       # Reviewer 2: "hard" = Eq.27 AND-gate; "soft" = graded logistic gate
-#   gate_temp: 0.05         # Reviewer 2: temperature for the soft gate
+#   attitude_noise: 0.0     # sd of Gaussian noise on attitude updates
+#   gate_mode: "hard"       # "hard" = Eq.27 AND-gate; "soft" = graded logistic gate
+#   gate_temp: 0.05         # temperature for the soft gate
