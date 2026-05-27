@@ -170,16 +170,15 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
             st = states[i]
             tr = traits[i]
 
-            # Slow state updates
+            # Slow state updates (Eqs. 1-7).
+            # Eqs. 4-5 (motivation pre-decay) run before Eq. 6 so cap growth uses M^r*.
             st.load = clip(st.load - params.load_decay, 0.0, 1.0)
             st.norm = clip((1.0 - params.norm_mu) * st.norm + params.norm_mu * global_beh_rate, 0.0, 1.0)
             st.strength = clip(st.strength - params.strength_decay, 0.0, 1.0)
-            st.cap = clip(st.cap + params.cap_lr * st.mr, 0.0, 1.0)
-            st.opp = clip(st.opp + params.opp_lr * st.norm, 0.0, 1.0)
-
-            # Motivation decay before message processing
             mr_star = clip(st.mr - params.delta_r, 0.0, 1.0)
             ma_star = clip(st.ma - params.delta_a, 0.0, 1.0)
+            st.cap = clip(st.cap + params.cap_lr * mr_star, 0.0, 1.0)
+            st.opp = clip(st.opp + params.opp_lr * st.norm, 0.0, 1.0)
 
             # Exposure step
             exposed_msgs = []
