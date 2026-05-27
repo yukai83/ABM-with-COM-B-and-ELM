@@ -108,8 +108,21 @@ def compute_intent(state: AgentState, p: Params) -> float:
     return float(sigmoid(raw))
 
 
-def behaviour_from_intent(state: AgentState, intent: float, p: Params) -> int:
-    """Apply the intent and feasibility thresholds."""
+def behaviour_from_intent(state: AgentState, intent: float, p: Params, rng=None) -> int:
+    """Apply the intent and feasibility thresholds.
+
+    Default ("hard") mode reproduces Eq. (27): a deterministic AND-gate over the
+    intent, capability, and opportunity thresholds. The gate is modular: setting
+    ``p.gate_mode = "soft"`` replaces the step gate with a graded logistic
+    feasibility probability (Reviewer 2), demonstrating that the threshold rule
+    in Eq. (27) is one interchangeable instantiation rather than a structural
+    commitment.
+    """
+    if getattr(p, "gate_mode", "hard") == "soft" and rng is not None:
+        p_i = sigmoid((intent - p.theta_intent) / p.gate_temp)
+        p_c = sigmoid((state.cap - p.theta_cap) / p.gate_temp)
+        p_o = sigmoid((state.opp - p.theta_opp) / p.gate_temp)
+        return int(rng.uniform() < p_i * p_c * p_o)
     return int(
         (intent >= p.theta_intent)
         and (state.cap >= p.theta_cap)
@@ -193,6 +206,8 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
                 pc = p_central(st, tr, m, params, mr_star=mr_star)
 
                 dA = delta_attitude(st, tr, m, pc, params)
+                if params.attitude_noise > 0.0:
+                    dA += float(rng.normal(0.0, params.attitude_noise))  # Reviewer 2: optional process noise
                 st.att = clip(st.att + dA, -1.0, 1.0)
 
                 dS = delta_strength(st, tr, m, pc, params)
@@ -214,7 +229,7 @@ def simulate(g, traits, states, params, scenario, n_steps, rng,
 
             # Intention and behaviour
             st.intent = compute_intent(st, params)
-            st.beh    = behaviour_from_intent(st, st.intent, params)
+            st.beh    = behaviour_from_intent(st, st.intent, params, rng=rng)
 
             if st.intent >= params.theta_intent:
                 intent_high_count += 1

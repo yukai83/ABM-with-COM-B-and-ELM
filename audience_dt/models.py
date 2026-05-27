@@ -97,6 +97,10 @@ class Params:
     strength_decay: float = 0.005
     delta_r: float = 0.005
     delta_a: float = 0.005
+    # Optional camera-ready extensions (defaults reproduce the original model).
+    attitude_noise: float = 0.0   # Reviewer 2: sigma of optional Gaussian process noise on attitude updates (0 = off)
+    gate_mode: str = "hard"       # Reviewer 2: "hard" = threshold AND-gate (Eq. 27); "soft" = graded probabilistic gate
+    gate_temp: float = 0.05       # Reviewer 2: temperature for the soft (logistic) feasibility gate
 
 
 @dataclass
