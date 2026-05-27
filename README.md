@@ -81,10 +81,6 @@ Each scenario saves its own CSV and PNG file:
 | `--scenario_c` | `scenario_c.csv`, `scenario_c.png` |
 | `--verify` | printed results only |
 
-### Camera-ready robustness, sensitivity, and ablation (SIMULTECH 2026 reviewer responses)
-
-These additive flags back the reviewer responses. They do not change the core
-model or any default; existing scenario outputs are unchanged.
 
 ```bash
 # Multi-seed robustness for Scenario A: mean + normal-approx 95% CI across seeds
@@ -97,20 +93,13 @@ python run.py --sensitivity
 python run.py --ablation_baseline
 ```
 
-| Flag | Outputs | Reviewer point addressed |
-|---|---|---|
-| `--robustness` | `robustness_scenario_a.csv` | R1.2 (multi-seed robustness, confidence intervals) |
-| `--sensitivity` | `sensitivity_scenario_a.csv` | R1.2 (sensitivity of influential parameters) |
-| `--ablation_baseline` | `ablation_baseline.csv` | R1.4 (ablation vs simpler diffusion+sentiment model) |
-
 Two optional model extensions are also available via config or `Params`
 (both off by default, so results are unchanged unless enabled):
 
 - `attitude_noise` — standard deviation of optional Gaussian process noise on
-  attitude updates (Reviewer 2, noise);
-- `gate_mode: "soft"` with `gate_temp` — replaces the Eq. (27) threshold
-  AND-gate with a graded logistic feasibility probability (Reviewer 2,
-  pluggable behaviour rule).
+
+- `gate_mode: "soft"` with `gate_temp`
+
 
 ### 5. Change parameters
 
