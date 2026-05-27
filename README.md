@@ -3,7 +3,7 @@
 An agent-based digital twin for simulating audience response to persuasive messaging.
 It integrates the **COM-B** behavioural feasibility framework with the **Elaboration Likelihood Model (ELM)** for route-dependent persuasion and attitude durability.
 
-> Companion code for: *"A Verifiable Agent-Based Digital Twin Architecture for Audience Response: Integrating COM-B and ELM for Durable Behaviour Simulation"* — ICSOFT 2026 Position Paper.
+> Companion code for: *"Toward Verifiable Audience Digital Twins: An Agent-Based Architecture Integrating COM-B and ELM"* — SIMULTECH 2026.
 
 ---
 
@@ -80,6 +80,37 @@ Each scenario saves its own CSV and PNG file:
 | `--scenario_b` | `scenario_b.csv`, `scenario_b.png` |
 | `--scenario_c` | `scenario_c.csv`, `scenario_c.png` |
 | `--verify` | printed results only |
+
+### Camera-ready robustness, sensitivity, and ablation (SIMULTECH 2026 reviewer responses)
+
+These additive flags back the reviewer responses. They do not change the core
+model or any default; existing scenario outputs are unchanged.
+
+```bash
+# Multi-seed robustness for Scenario A: mean + normal-approx 95% CI across seeds
+python run.py --robustness --n_seeds 20
+
+# One-at-a-time local sensitivity of the Scenario A durability gap
+python run.py --sensitivity
+
+# Ablation: full COM-B + ELM model vs a minimal diffusion+sentiment baseline
+python run.py --ablation_baseline
+```
+
+| Flag | Outputs | Reviewer point addressed |
+|---|---|---|
+| `--robustness` | `robustness_scenario_a.csv` | R1.2 (multi-seed robustness, confidence intervals) |
+| `--sensitivity` | `sensitivity_scenario_a.csv` | R1.2 (sensitivity of influential parameters) |
+| `--ablation_baseline` | `ablation_baseline.csv` | R1.4 (ablation vs simpler diffusion+sentiment model) |
+
+Two optional model extensions are also available via config or `Params`
+(both off by default, so results are unchanged unless enabled):
+
+- `attitude_noise` — standard deviation of optional Gaussian process noise on
+  attitude updates (Reviewer 2, noise);
+- `gate_mode: "soft"` with `gate_temp` — replaces the Eq. (27) threshold
+  AND-gate with a graded logistic feasibility probability (Reviewer 2,
+  pluggable behaviour rule).
 
 ### 5. Change parameters
 
@@ -174,11 +205,12 @@ The model executes six steps per agent per timestep:
 If you use this code, please cite:
 
 ```bibtex
-@inproceedings{authors2026audience,
-  title     = {A Verifiable Agent-Based Digital Twin Architecture for Audience Response:
-               Integrating COM-B and ELM for Durable Behaviour Simulation},
-  author    = {[Authors]},
-  booktitle = {Proceedings of ICSOFT 2026},
+@inproceedings{zeng2026audience,
+  title     = {Toward Verifiable Audience Digital Twins: An Agent-Based
+               Architecture Integrating COM-B and ELM},
+  author    = {Zeng, Yukai},
+  booktitle = {Proceedings of the 16th International Conference on Simulation
+               and Modeling Methodologies, Technologies and Applications (SIMULTECH)},
   year      = {2026}
 }
 ```

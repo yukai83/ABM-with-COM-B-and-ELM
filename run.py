@@ -15,6 +15,8 @@ from audience_dt.models import Params, Scenario
 from audience_dt.sim import init_population, init_population_identity_groups, simulate
 from audience_dt.metrics import outputs_to_frame, outputs_to_frame_with_groups, durability_half_life
 from audience_dt.verify import verify_route_monotonicity, verify_ic_formula, ablation_visibility
+from audience_dt.extensions import (run_multiseed, scenario_a_metrics,
+                                    local_sensitivity, run_ablation_baseline)
 
 
 def load_params(cfg: dict) -> tuple:
@@ -279,6 +281,14 @@ def main():
     ap.add_argument("--scenario_a", action="store_true")
     ap.add_argument("--scenario_b", action="store_true")
     ap.add_argument("--scenario_c", action="store_true")
+    ap.add_argument("--robustness", action="store_true",
+                    help="Multi-seed robustness summary for Scenario A (mean + 95% CI).")
+    ap.add_argument("--sensitivity", action="store_true",
+                    help="One-at-a-time local sensitivity of Scenario A durability.")
+    ap.add_argument("--ablation_baseline", action="store_true",
+                    help="Compare the full model against a diffusion+sentiment baseline.")
+    ap.add_argument("--n_seeds", type=int, default=20,
+                    help="Number of seeds for --robustness (default 20).")
     args = ap.parse_args()
 
     with open(args.config, "r", encoding="utf-8") as f:
@@ -346,6 +356,34 @@ def main():
             g0_att   = sub["mean_att_G0"].iloc[-1] if "mean_att_G0" in sub.columns else float("nan")
             g1_att   = sub["mean_att_G1"].iloc[-1] if "mean_att_G1" in sub.columns else float("nan")
             print(f"  {cond:22s}: att_var={var_end:.4f}  mean_seg={mean_seg:.3f}  G0={g0_att:.3f}  G1={g1_att:.3f}")
+
+    if args.robustness:
+        print("\n── Multi-seed robustness (Scenario A) ───────────────")
+        seeds = list(range(args.n_seeds))
+        summ = run_multiseed(run_scenario_a, scenario_a_metrics, params, seeds)
+        summ.to_csv("robustness_scenario_a.csv")
+        with pd.option_context("display.width", 120, "display.float_format", "{:.4f}".format):
+            print(summ.loc[["central_retention", "peripheral_retention", "retention_gap"]])
+        print("  Saved: robustness_scenario_a.csv")
+
+    if args.sensitivity:
+        print("\n── Local sensitivity (Scenario A retention gap) ─────")
+        param_names = ["w_load", "kappa_c", "kappa_p", "eta_c", "eta_p",
+                       "strength_decay", "lambda_s", "theta_intent"]
+        sens = local_sensitivity(run_scenario_a, scenario_a_metrics, "retention_gap",
+                                 params, param_names, rel_delta=0.10, seed=seed)
+        sens.to_csv("sensitivity_scenario_a.csv")
+        with pd.option_context("display.width", 120, "display.float_format", "{:.4f}".format):
+            print(sens[["base_value", "elasticity"]])
+        print("  Saved: sensitivity_scenario_a.csv")
+
+    if args.ablation_baseline:
+        print("\n── Ablation: full model vs diffusion+sentiment ──────")
+        abl = run_ablation_baseline(run_scenario_a, params, seed=seed)
+        abl.to_csv("ablation_baseline.csv")
+        with pd.option_context("display.width", 140, "display.float_format", "{:.4f}".format):
+            print(abl)
+        print("  Saved: ablation_baseline.csv")
 
     if args.verify:
         print("\n── Verification ─────────────────────────────────────")
